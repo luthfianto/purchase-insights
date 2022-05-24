@@ -1,0 +1,174 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(corrplot)
+dfo=read.csv('D:\\bl\\insight-test.csv')
+```
+
+```{r}
+df=data.frame(dfo)
+```
+
+From the EDA in Python Jupyter Notebook we see that voucher_valid has NAN value, while trx_is_voucher has no NA value.
+
+|index|has nan?|dtypes|num of unique values|list of unique values|
+|---|---|---|---|---|
+|user_id|false|int64|69306|[281605921 125302602 125327377 ... 121187821 124128885 124611908]|
+|is_new|false|int64|2|[1 0]|
+|time|false|object|229835|['2015-06-12 03:41:44.263000+00:00' '2015-06-15 |
+|voucher_type|true|float64|2|[nan  1.  0.]|
+|voucher_valid|true|float64|2|[nan  1.  0.]|
+|basket_amount|false|float64|125094|[2.87720076e-05 2.35151605e-05 1.64053187e-04 ... 7.68194141e-06 1.74740762e-04 6.00342486e-05]|
+|voucher_max_amount|false|float64|26|[0.0e+00 2.0e-04 4.0e-04 1.0e-03 |
+|voucher_percentage|false|float64|20|[ 0.   1.   2.   1.5 10.  20.  99.  50.  15.   5.   7.5  0.8  0.5 25. 80.   0.7  3.   4.  12.   0.6]|
+|voucher_min_purchase|false|float64|16|[0.0e+00 1.0e-02 2.0e-02 6.0e-03 2.0e-03 4.0e-03 1.0e-03 1.0e+00 2.0e-01 4.0e-02 3.0e-03 1.0e-05 1.0e-01 2.0e-05 4.0e-04 1.2e-03]
+|voucher_amount|false|float64|7451|[0.         0.01986362 0.01932352 ... 0.01088298 0.03666067 0.01636898]|
+|trx_is_voucher|false|int64|2|[0 1]|
+|is_paid|false|int64|2|[0 1]|
+|is_remitted|false|int64|2|[0 1]|
+|user_purchased_prior|false|int64|2|[0 1]|
+|num_voucher_errors|false|int64|102|[  0   6   5   1   3  16  48  23   4  24  22  20  19  18   7  15  17  14|
+|purchase|false|int64|2|[0 1]|
+|province|false|int64|27|[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26]|
+|marketing_tier|true|object|4|['tier_2' 'tier_1' 'tier_3' 'tier_4' nan]|
+|user_type|false|int64|16|[ 0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15]|
+|user_group|false|int64|2|[0 1]|
+|account_type|false|int64|7|[0 1 2 3 4 5 6]|
+|referrer_type|false|int64|7|[0 1 2 3 4 5 6]|
+|account_created_at|false|object|69159|['2014-03-23 04:01:30+00:00' '2013-07-18 07:24:40+00:00']|
+|user_register_from|false|int64|8|[0 1 2 3 4 5 6 7]|
+|sessions|false|float64|1513|[0.00415763 0.01644975 0.02440347 ... 0.25180766 0.22125813 0.16666667]|
+|average_session_length|false|float64|72918|[0.00142015 0.00484802 0.00305943 ... 0.00637333 0.02813384 0.00343421]|
+|num_visit_promo_page|false|float64|95|[0.         0.00675676 0.02027027 0.04054054 0.10810811 0.01351351|
+|num_product_types|false|float64|31|[0.         0.22580645 0.03225806 0.19354839 0.48387097 0.35483871|
+|num_trx|false|float64|1868|[0.00000000e+00 9.00009000e-05 7.23920283e-05 ... 2.32437107e-03 3.29285902e-03 3.86612562e-03]|
+|num_trx_voucher|false|float64|122|[0.         0.01616628 0.02309469 0.00923788 0.00230947 0.03926097 ]|
+|gmv|false|float64|65720|[0.033242   0.03388193 0.03347649 ... 0.03412042 0.03324484 0.03326364]|
+|aov|false|float64|65714|[0.15561851 0.15770251 0.15656791 ... 0.16049226 0.15576011 0.15594275]|
+
+Let's make dummies out of voucher valid and see the correlation of NA value
+
+```{r}
+df$voucher_valid_NA = ifelse(is.na(df$voucher_valid),1,0)
+df$voucher_valid_0 = ifelse(!is.na(df$voucher_valid) & df$voucher_valid==0,1,0)
+df$voucher_valid_1 = ifelse(!is.na(df$voucher_valid) & df$voucher_valid==1,1,0)
+num_cols <- unlist(lapply(df, is.numeric))
+dfnum=df[ , num_cols]
+dfnum=subset(dfnum, select = -c(user_id, is_paid, is_remitted, voucher_type, voucher_valid))
+correlations=cor(dfnum)
+corrplot(correlations, method="circle")
+```
+Since voucher_valid is the prequisite of trx_is_voucher, we impute voucher_valid from trx_is_voucher
+
+```{r}
+df$voucher_valid =ifelse(is.na(df$voucher_valid), ifelse(df$trx_is_voucher==1, 1, NA), df$voucher_valid)
+df$voucher_valid_NA = ifelse(is.na(df$voucher_valid),1,0)
+df$voucher_valid_0 = ifelse(!is.na(df$voucher_valid) & df$voucher_valid==0,1,0)
+df$voucher_valid_1 = ifelse(!is.na(df$voucher_valid) & df$voucher_valid==1,1,0)
+library(corrplot)
+num_cols <- unlist(lapply(df, is.numeric))
+dfnum=df[ , num_cols]
+dfnum=subset(dfnum, select = -c(user_id, is_paid, is_remitted, voucher_type, voucher_valid))
+correlations=cor(dfnum)
+corrplot(correlations, method="circle")
+```
+
+we see that even after imputation, voucher_type_NA is still correlated negatively with trx_is_voucher, so let's impute voucher_type==NA values with 0
+
+```{r}
+df$voucher_valid =ifelse(is.na(df$voucher_valid), ifelse(df$trx_is_voucher==1, 1, 0), df$voucher_valid)
+df$voucher_valid_NA = ifelse(is.na(df$voucher_valid),1,0)
+df$voucher_valid_0 = ifelse(!is.na(df$voucher_valid) & df$voucher_valid==0,1,0)
+df$voucher_valid_1 = ifelse(!is.na(df$voucher_valid) & df$voucher_valid==1,1,0)
+library(corrplot)
+num_cols <- unlist(lapply(df, is.numeric))
+dfnum=df[ , num_cols]
+dfnum=subset(dfnum, select = -c(user_id, is_paid, is_remitted, voucher_type, voucher_valid,voucher_valid_NA))
+correlations=cor(dfnum)
+corrplot(correlations, method="circle")
+```
+
+now let's see voucher_type
+
+```{r}
+df$voucher_type_NA = ifelse(is.na(df$voucher_type),1,0)
+df$voucher_type_0 = ifelse(!is.na(df$voucher_type) & df$voucher_type==0,1,0)
+df$voucher_type_1 = ifelse(!is.na(df$voucher_type) & df$voucher_type==1,1,0)
+
+num_cols <- unlist(lapply(df, is.numeric))
+dfnum=df[ , num_cols]
+dfnum=subset(dfnum, select = -c(user_id, is_paid, is_remitted, voucher_type, voucher_valid,voucher_valid_NA))
+correlations=cor(dfnum)
+corrplot(correlations, method="circle")
+```
+
+
+Since voucher_type 0 and 1 positively correlated with purchase, while NA correlated negatively, we consider voucher_type==NA as a different category that are not fit to type_0 and type_1.
+
+Let's look at percentage
+
+```{r}
+hist(df[df$voucher_percentage>0 &df$voucher_percentage<1,]$voucher_percentage)
+```
+
+Percentage has both “0-1 range” & “0-100 range”, looks like anomaly. Let's multiply the 0-1 with 100
+
+```{r}
+df$voucher_percentage[df$voucher_percentage>0 & df$voucher_percentage<1]=df$voucher_percentage[df$voucher_percentage>0 & df$voucher_percentage<1]*100
+```
+
+let's plot num_trx
+
+```{r}
+plot(df$num_trx)
+```
+num_trx==1 is anomaly. let's exclude num_trx==1
+
+```{r}
+df=df[df$num_trx<1,]
+plot(df$num_trx)
+```
+Now let's prepare our data for regression analysis
+
+
+```{r}
+df[is.na(df)] = "NA"
+df$province=as.factor(df$province)
+df$user_type=as.factor(df$user_type)
+df$user_group=as.factor(df$user_group)
+df$account_type=as.factor(df$account_type)
+df$referrer_type=as.factor(df$referrer_type)
+df$user_register_from=as.factor(df$user_register_from)
+```
+
+Here I create new feature that measure users' account age in days
+```{r}
+df$time=as.POSIXct(df$time,format="%Y-%m-%d %H:%M:%S")
+df$account_created_at=as.POSIXct(df$account_created_at,format="%Y-%m-%d %H:%M:%S")
+df$account_day= scale(  ((df$time - df$account_created_at)/86400) )
+```
+
+
+Saya akan melakukan analisis regresi logistik dengan fitur-fitur yang saya pilih.
+
+Kolom-kolom yang saya exclude adalah `is_paid` (pembayaran) dan `is_remitted` (penyelesaian transaksi) yang hanya dapat x setelah pembelian (`purchase`) selesai.
+
+```{r}
+lm.fit = glm('purchase ~  is_new + account_day + voucher_type + voucher_valid + basket_amount + voucher_max_amount + voucher_percentage + voucher_min_purchase + voucher_amount + trx_is_voucher  + user_purchased_prior + num_voucher_errors + province + marketing_tier + user_type + user_group + account_type + referrer_type + user_register_from + sessions + average_session_length + num_visit_promo_page + num_product_types + num_trx + num_trx_voucher + gmv + aov',data=df, family=binomial)
+smry.lm = summary(lm.fit)
+smry.lm
+```
+
+Berikut koefisien regresi diurutkan berdasarkan besaran absolut dan dipilih hanya yang memiliki p-value<0.001
+
+```{r}
+modcoef <- summary(lm.fit)[["coefficients"]]
+dfmod=as.data.frame(modcoef)
+#dfmod$exp=exp(dfmod$Estimate)
+dfmod=dfmod[order(-abs(dfmod$Estimate)), ]
+dfmod[dfmod$`Pr(>|z|)` < 0.001 ,]
+```
